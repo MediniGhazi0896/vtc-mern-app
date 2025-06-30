@@ -85,9 +85,9 @@ const EditBooking = () => {
           value={form.status}
           onChange={handleChange}
         >
-          <MenuItem value="pending">Pending</MenuItem>
-          <MenuItem value="confirmed">Confirmed</MenuItem>
-          <MenuItem value="cancelled">Cancelled</MenuItem>
+          <MenuItem value="Pending">Pending</MenuItem>
+          <MenuItem value="Confirmed">Confirmed</MenuItem>
+          <MenuItem value="Cancelled">Cancelled</MenuItem>
         </TextField>
         <Button type="submit" variant="contained">Update</Button>
       </Box>

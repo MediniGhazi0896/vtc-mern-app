@@ -3,7 +3,6 @@ import {
   Drawer,
   Toolbar,
   List,
-  ListItem,
   ListItemIcon,
   ListItemText,
   AppBar,
@@ -28,7 +27,6 @@ const drawerWidth = 240;
 const DashboardLayout = ({ children }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-  //const theme = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
@@ -45,8 +43,8 @@ const DashboardLayout = ({ children }) => {
   const drawer = (
     <div>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          VTC Panel
+        <Typography variant="h6" noWrap>
+          VTC Admin
         </Typography>
       </Toolbar>
       <List>
@@ -57,9 +55,7 @@ const DashboardLayout = ({ children }) => {
           </ListItemButton>
         ))}
         <ListItemButton onClick={handleLogout}>
-          <ListItemIcon>
-            <Logout />
-          </ListItemIcon>
+          <ListItemIcon><Logout /></ListItemIcon>
           <ListItemText primary="Logout" />
         </ListItemButton>
       </List>
@@ -85,7 +81,7 @@ const DashboardLayout = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap>
             Welcome, {user?.name || 'User'}
           </Typography>
         </Toolbar>
@@ -100,7 +96,7 @@ const DashboardLayout = ({ children }) => {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { width: drawerWidth },
           }}
         >
           {drawer}
@@ -110,7 +106,7 @@ const DashboardLayout = ({ children }) => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { width: drawerWidth },
           }}
           open
         >
@@ -118,7 +114,7 @@ const DashboardLayout = ({ children }) => {
         </Drawer>
       </Box>
 
-      {/* Main Content */}
+      {/* Main content */}
       <Box
         component="main"
         sx={{
