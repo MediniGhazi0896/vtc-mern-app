@@ -16,6 +16,23 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/bookings/stats — Get booking stats
+router.get('/stats', authenticate, async (req, res) => {
+  try {
+    const userFilter = req.user.role === 'admin' ? {} : { userId: req.user.id };
+    const bookings = await Booking.find(userFilter);
+
+    const total = bookings.length;
+    const completed = bookings.filter(b => b.status === 'Confirmed').length;
+    const cancelled = bookings.filter(b => b.status === 'Cancelled').length;
+    const pending = bookings.filter(b => !b.status || b.status === 'Pending').length;
+
+    res.json({ total, completed, cancelled, pending });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load stats' });
+  }
+});
+
 // GET /api/bookings/:id — Get one booking
 router.get('/:id', authenticate, async (req, res) => {
   try {
