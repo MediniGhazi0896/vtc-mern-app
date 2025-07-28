@@ -2,6 +2,8 @@ import express from 'express';
 import User from '../models/User.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { authorize } from '../middlewares/roleMiddleware.js';
+import { logAudit } from '../utils/logAudit.js';
+import AuditLog from '../models/AuditLog.js';
 const router = express.Router();
 
 // ========== UTILS ==========
@@ -55,25 +57,26 @@ router.put('/users/:id/role', authenticate, authorize(['admin']), async (req, re
   }
 
   try {
-    const updated = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true }
-    );
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (!updated) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    user.role = role;
+    await user.save();
 
-    res.json({ message: 'User role updated', user: updated });
+    await logAudit({
+      actorId: req.user.id,
+      targetId: user._id,
+      action: 'role-change',
+      details: `Changed role to "${role}"`
+    });
+
+    res.json({ message: 'User role updated', user });
   } catch (err) {
-    console.error('[PUT] /users/:id/role error:', err);
     res.status(500).json({ message: 'Failed to update role', error: err.message });
   }
 });
 
-
-// PATCH /admin/users/:id/deactivate
+// PATCH /admin/users/:id/deactivate → Soft delete (set isActive = false)
 router.patch('/users/:id/deactivate', authenticate, authorize(['admin']), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -86,13 +89,21 @@ router.patch('/users/:id/deactivate', authenticate, authorize(['admin']), async 
     user.isActive = false;
     await user.save();
 
+    await logAudit({
+      actorId: req.user.id,
+      targetId: user._id,
+      action: 'deactivate',
+      details: 'User deactivated'
+    });
+
     res.json({ message: 'User deactivated', user });
   } catch (err) {
     res.status(500).json({ message: 'Failed to deactivate user', error: err.message });
   }
 });
-// ========== DELETE: Permanently Remove User ==========
 
+
+// DELETE /admin/users/:id → Permanent delete
 router.delete('/users/:id', authenticate, authorize(['admin']), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -103,12 +114,45 @@ router.delete('/users/:id', authenticate, authorize(['admin']), async (req, res)
     }
 
     await User.findByIdAndDelete(req.params.id);
+
+    await logAudit({
+      actorId: req.user.id,
+      targetId: user._id,
+      action: 'delete',
+      details: 'User permanently deleted'
+    });
+
     res.json({ message: 'User permanently deleted' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete user', error: err.message });
   }
 });
 
+// GET /admin/audit/logs → View recent admin actions
+router.get('/audit/logs', authenticate, authorize(['admin']), async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const total = await AuditLog.countDocuments();
+    const logs = await AuditLog.find()
+      .populate('actor', 'name email')
+      .populate('target', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      logs,
+      total,
+      page,
+      pages: Math.ceil(total / limit)
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load audit logs', error: err.message });
+  }
+});
 
 
 export default router;

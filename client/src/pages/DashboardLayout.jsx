@@ -10,13 +10,14 @@ import {
   CssBaseline,
   IconButton,
   ListItemButton,
+  Divider
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Logout,
   Dashboard as DashboardIcon,
   LocalTaxi,
-  Person,
+  Person
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -27,28 +28,32 @@ const drawerWidth = 240;
 const DashboardLayout = ({ children }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  const toggleDrawer = () => {
+    setOpen(!open);
+  };
+
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard' },
     { text: 'My Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings' },
     { text: 'Profile', icon: <Person />, route: '/dashboard/profile' },
-    { text: 'New Booking', icon: <LocalTaxi />, route: '/dashboard/bookings/new' },
-    { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users' },
+    { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users' }
   ];
 
-  const drawer = (
+  const drawerContent = (
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap>
           VTC Admin
         </Typography>
       </Toolbar>
+      <Divider />
       <List>
         {menuItems.map((item) => (
           <ListItemButton key={item.text} onClick={() => navigate(item.route)}>
@@ -67,19 +72,22 @@ const DashboardLayout = ({ children }) => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
+
+      {/* AppBar with Toggle Button */}
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: { sm: `calc(100% - ${open ? drawerWidth : 0}px)` },
+          ml: { sm: `${open ? drawerWidth : 0}px` },
+          transition: 'width 0.3s ease, margin 0.3s ease'
         }}
       >
         <Toolbar>
           <IconButton
             color="inherit"
             edge="start"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            sx={{ display: { sm: 'none' }, mr: 2 }}
+            onClick={toggleDrawer}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
@@ -89,32 +97,21 @@ const DashboardLayout = ({ children }) => {
         </Toolbar>
       </AppBar>
 
-      {/* Sidebar */}
-      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={() => setMobileOpen(false)}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { width: drawerWidth },
-          }}
-        >
-          {drawer}
-        </Drawer>
-
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { width: drawerWidth },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
+      {/* Drawer */}
+      <Drawer
+        variant="persistent"
+        open={open}
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: drawerWidth,
+            boxSizing: 'border-box'
+          }
+        }}
+      >
+        {drawerContent}
+      </Drawer>
 
       {/* Main content */}
       <Box
@@ -122,7 +119,8 @@ const DashboardLayout = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: { sm: `calc(100% - ${open ? drawerWidth : 0}px)` },
+          transition: 'width 0.3s ease'
         }}
       >
         <Toolbar />
