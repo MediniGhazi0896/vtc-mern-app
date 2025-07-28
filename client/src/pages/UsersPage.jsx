@@ -41,56 +41,56 @@ const UsersPage = () => {
     }
   };
 
-const handleRoleChange = async (id, newRole) => {
-  try {
-    const res = await API.put(`/admin/users/${id}/role`, { role: newRole });
-    const updated = users.map((u) => (u._id === id ? res.data.user : u));
-    setUsers(updated);
-    showSnackbar('✅ Role updated successfully');
-  } catch (err) {
-    showSnackbar('❌ Failed to update role', 'error');
-  }
-};
+  const handleRoleChange = async (id, newRole) => {
+    try {
+      const res = await API.put(`/admin/users/${id}/role`, { role: newRole });
+      const updated = users.map((u) => (u._id === id ? res.data.user : u));
+      setUsers(updated);
+      showSnackbar('✅ Role updated successfully');
+    } catch (err) {
+      showSnackbar('❌ Failed to update role', 'error');
+    }
+  };
 
-const handleDeactivateUser = async (id) => {
-  if (!window.confirm('Deactivate this user?')) return;
-  try {
-    await API.patch(`/admin/users/${id}/deactivate`);
-    setUsers(users.map((u) => u._id === id ? { ...u, isActive: false } : u));
-    showSnackbar('✅ User deactivated');
-  } catch (err) {
-    showSnackbar('❌ Failed to deactivate user', 'error');
-  }
-};
+  const handleDeactivateUser = async (id) => {
+    if (!window.confirm('Deactivate this user?')) return;
+    try {
+      await API.patch(`/admin/users/${id}/deactivate`);
+      setUsers(users.map((u) => u._id === id ? { ...u, isActive: false } : u));
+      showSnackbar('✅ User deactivated');
+    } catch (err) {
+      showSnackbar('❌ Failed to deactivate user', 'error');
+    }
+  };
 
-const handleDeleteUser = async (id) => {
-  if (!window.confirm('Permanently delete this user? This cannot be undone.')) return;
-  try {
-    await API.delete(`/admin/users/${id}`);
-    setUsers(users.filter((u) => u._id !== id));
-    showSnackbar('🗑️ User permanently deleted');
-  } catch (err) {
-    showSnackbar('❌ Failed to delete user', 'error');
-  }
-};
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm('Permanently delete this user? This cannot be undone.')) return;
+    try {
+      await API.delete(`/admin/users/${id}`);
+      setUsers(users.filter((u) => u._id !== id));
+      showSnackbar('🗑️ User permanently deleted');
+    } catch (err) {
+      showSnackbar('❌ Failed to delete user', 'error');
+    }
+  };
 
 
   useEffect(() => {
     fetchUsers();
   }, [page, search]);
-const [snackbar, setSnackbar] = useState({
-  open: false,
-  message: '',
-  severity: 'success'
-});
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
-const showSnackbar = (message, severity = 'success') => {
-  setSnackbar({ open: true, message, severity });
-};
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
-const handleCloseSnackbar = () => {
-  setSnackbar({ ...snackbar, open: false });
-};
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
@@ -117,7 +117,7 @@ const handleCloseSnackbar = () => {
             <TableCell>Email</TableCell>
             <TableCell>Role</TableCell>
             <TableCell>Status</TableCell>
-         
+
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -139,39 +139,39 @@ const handleCloseSnackbar = () => {
               </TableCell>
               <TableCell>
                 <Chip
-  label={user._id.toString() === currentUserId ? 'Active' : 'Inactive'}
-  color={user._id.toString() === currentUserId ? 'success' : 'default'}
-  size="small"
-/>
+                  label={user._id.toString() === currentUserId ? 'Active' : 'Inactive'}
+                  color={user._id.toString() === currentUserId ? 'success' : 'default'}
+                  size="small"
+                />
 
               </TableCell>
-              
-              <TableCell>
-  {user._id !== currentUserId && user.role !== 'admin' && (
-    <Stack direction="row" spacing={1}>
-      <Button
-        variant="outlined"
-        color="warning"
-        size="small"
-        startIcon={<WarningAmberIcon />}
-        onClick={() => handleDeactivateUser(user._id)}
-        disabled={!user.isActive}
-      >
-        Deactivate
-      </Button>
 
-      <Button
-        variant="outlined"
-        color="error"
-        size="small"
-        startIcon={<DeleteIcon />}
-        onClick={() => handleDeleteUser(user._id)}
-      >
-        Delete
-      </Button>
-    </Stack>
-  )}
-</TableCell>
+              <TableCell>
+                {user._id !== currentUserId && user.role !== 'admin' && (
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      startIcon={<WarningAmberIcon />}
+                      onClick={() => handleDeactivateUser(user._id)}
+                      disabled={!user.isActive}
+                    >
+                      Deactivate
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteUser(user._id)}
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                )}
+              </TableCell>
 
 
             </TableRow>
@@ -183,15 +183,15 @@ const handleCloseSnackbar = () => {
         <Pagination count={pages} page={page} onChange={(_, value) => setPage(value)} />
       </Box>
       <Snackbar
-  open={snackbar.open}
-  autoHideDuration={3000}
-  onClose={handleCloseSnackbar}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
-  <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-    {snackbar.message}
-  </Alert>
-</Snackbar>
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
     </Paper>
   );

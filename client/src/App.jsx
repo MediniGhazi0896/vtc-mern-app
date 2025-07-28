@@ -5,9 +5,12 @@ import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
 import DashboardHome from './pages/DashboardHome'; // Make sure this file exists
 import NewBooking from './pages/NewBooking';       // Make sure this file exists
-import AuthPage from './pages/AuthPage'; 
+import AuthPage from './pages/AuthPage';
 import EditBooking from './pages/EditBooking'; // Make sure this file exists
 import UsersPage from './pages/UsersPage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import AdminPanelPage from './pages/AdminPanelPage'; // Make sure this file exists
+
 
 function App() {
   return (
@@ -26,11 +29,11 @@ function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="bookings/new" element={<NewBooking />} />
         <Route path="/dashboard/bookings/edit/:id" element={<EditBooking />} />
-        <Route path="admin/users" element={<UsersPage />} />
+        <Route path="admin/users" element={<AdminPanelPage />} />
+
 
       </Route>
       <Route path="/" element={<AuthPage />} />
-    
 
     </Routes>
   );
