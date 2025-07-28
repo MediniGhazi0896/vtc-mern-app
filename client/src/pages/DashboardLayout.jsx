@@ -38,6 +38,8 @@ const DashboardLayout = ({ children }) => {
     { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard' },
     { text: 'My Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings' },
     { text: 'Profile', icon: <Person />, route: '/dashboard/profile' },
+    { text: 'New Booking', icon: <LocalTaxi />, route: '/dashboard/bookings/new' },
+    { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users' },
   ];
 
   const drawer = (

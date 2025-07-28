@@ -7,6 +7,7 @@ import DashboardHome from './pages/DashboardHome'; // Make sure this file exists
 import NewBooking from './pages/NewBooking';       // Make sure this file exists
 import AuthPage from './pages/AuthPage'; 
 import EditBooking from './pages/EditBooking'; // Make sure this file exists
+import UsersPage from './pages/UsersPage';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="bookings/new" element={<NewBooking />} />
         <Route path="/dashboard/bookings/edit/:id" element={<EditBooking />} />
+        <Route path="admin/users" element={<UsersPage />} />
 
       </Route>
       <Route path="/" element={<AuthPage />} />

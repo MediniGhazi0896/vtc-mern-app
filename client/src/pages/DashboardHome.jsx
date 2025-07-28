@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import { Typography, Grid, Paper } from '@mui/material';
 import { Doughnut } from 'react-chartjs-2';
 import API from '../services/api';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const DashboardHome = () => {
   const [stats, setStats] = useState({ total: 0, completed: 0, cancelled: 0 , pending: 0 });
