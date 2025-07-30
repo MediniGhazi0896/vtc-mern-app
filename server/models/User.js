@@ -10,7 +10,10 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'driver', 'admin'],
       default: 'user',
     },
-
+profileImage: {
+  type: String,
+  default: '' // or default to a placeholder image URL
+}
   },
   { timestamps: true }
 );

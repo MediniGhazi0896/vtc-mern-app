@@ -26,7 +26,8 @@ router.post('/register', async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        profileImage: user.profileImage
       },
       token
     });
@@ -49,7 +50,17 @@ router.post('/login', async (req, res) => {
       expiresIn: '1d'
     });
 
-    res.json({ token, user: {id: user._id,name: user.name,email: user.email, role: user.role} });
+    res.json({
+  token,
+  user: {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    profileImage: user.profileImage || ''
+  }
+});
+
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

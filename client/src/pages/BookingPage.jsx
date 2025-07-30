@@ -10,10 +10,12 @@ import {
   TableSortLabel,
   TextField,
   Box,
-  Button
+  Button,
+  Chip,
 } from '@mui/material';
 import API from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 const BookingPage = () => {
   const navigate = useNavigate();
@@ -21,8 +23,10 @@ const BookingPage = () => {
   const [search, setSearch] = useState('');
   const [searchUser, setSearchUser] = useState('');
   const [searchDate, setSearchDate] = useState('');
+  const [searchStatus, setSearchStatus] = useState('');
   const [orderAsc, setOrderAsc] = useState(true);
   const [page, setPage] = useState(1);
+const [statusFilter, setStatusFilter] = useState('all');
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -51,19 +55,41 @@ const BookingPage = () => {
     }
   };
 
-  const filtered = bookings
-    .filter((b) =>
-      b.pickupLocation?.toLowerCase().includes(search.toLowerCase()) &&
-      (!searchUser || b.userId?.name?.toLowerCase().includes(searchUser.toLowerCase())) &&
-      (!searchDate || new Date(b.createdAt).toISOString().slice(0, 10) === searchDate)
-    )
-    .sort((a, b) =>
-      orderAsc
-        ? new Date(a.createdAt) - new Date(b.createdAt)
-        : new Date(b.createdAt) - new Date(a.createdAt)
-    );
+ const filtered = bookings
+  .filter((b) =>
+    b.pickupLocation?.toLowerCase().includes(search.toLowerCase()) &&
+    (!searchUser || b.userId?.name?.toLowerCase().includes(searchUser.toLowerCase())) &&
+    (!searchDate || new Date(b.createdAt).toISOString().slice(0, 10) === searchDate) &&
+    (statusFilter === 'all' || b.status?.toLowerCase() === statusFilter)
+  )
+  .sort((a, b) =>
+    orderAsc
+      ? new Date(a.createdAt) - new Date(b.createdAt)
+      : new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
 
   const paginated = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+ const getStatusChip = (status) => {
+  const colorMap = {
+    confirmed: 'success',
+    cancelled: 'error',
+    pending: 'warning'
+  };
+
+  return (
+    <Chip
+      label={status.charAt(0).toUpperCase() + status.slice(1)}
+      color={colorMap[status?.toLowerCase()] || 'default'}
+      size="small"
+    />
+  );
+};
+
+
+
+
 
   return (
     <Paper sx={{ padding: 3 }}>
@@ -101,7 +127,22 @@ const BookingPage = () => {
           value={searchDate}
           onChange={(e) => setSearchDate(e.target.value)}
         />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Status</InputLabel>
+       <Select
+            value={statusFilter}
+            label="Status"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="confirmed">Confirmed</MenuItem>
+            <MenuItem value="canceled">Canceled</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
+      
+
 
       {/* Table */}
       <Table>
@@ -130,7 +171,7 @@ const BookingPage = () => {
               <TableCell>{b.userId?.name || 'N/A'}</TableCell>
               <TableCell>{b.pickupLocation || 'N/A'}</TableCell>
               <TableCell>{b.destination || 'N/A'}</TableCell>
-              <TableCell>{b.status || 'Pending'}</TableCell>
+              <TableCell>{getStatusChip(b.status)}</TableCell>
               <TableCell>
                 <Button
                   size="small"
