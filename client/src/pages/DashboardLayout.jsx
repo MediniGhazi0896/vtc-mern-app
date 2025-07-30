@@ -40,11 +40,13 @@ const DashboardLayout = ({ children }) => {
   };
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard' },
-    { text: 'My Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings' },
-    { text: 'Profile', icon: <Person />, route: '/dashboard/profile' },
-    { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users' }
-  ];
+  { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard', roles: ['user', 'admin', 'driver'] },
+  { text: 'My Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings', roles: ['user', 'admin'] },
+  { text: 'New Booking', icon: <LocalTaxi />, route: '/dashboard/bookings/new', roles: ['user'] },
+  { text: 'Profile', icon: <Person />, route: '/dashboard/profile', roles: ['user', 'admin', 'driver'] },
+  { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users', roles: ['admin'] }
+];
+
 
   const drawerContent = (
     <div>
@@ -55,12 +57,15 @@ const DashboardLayout = ({ children }) => {
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
-          <ListItemButton key={item.text} onClick={() => navigate(item.route)}>
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
+  {menuItems
+    .filter((item) => item.roles.includes(user?.role))
+    .map((item) => (
+      <ListItemButton key={item.text} onClick={() => navigate(item.route)}>
+        <ListItemIcon>{item.icon}</ListItemIcon>
+        <ListItemText primary={item.text} />
+      </ListItemButton>
+    ))}
+
         <ListItemButton onClick={handleLogout}>
           <ListItemIcon><Logout /></ListItemIcon>
           <ListItemText primary="Logout" />

@@ -4,6 +4,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.1.2",
     "@mui/material": "^7.1.2",
+    "multer": "^2.0.2",
     "react-toastify": "^11.0.5"
   }
 }
