@@ -10,6 +10,10 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'driver', 'admin'],
       default: 'user',
     },
+    isAvailable: {
+  type: Boolean,
+  default: true
+},
 profileImage: {
   type: String,
   default: '' // or default to a placeholder image URL
@@ -17,5 +21,7 @@ profileImage: {
   },
   { timestamps: true }
 );
+
+
 
 export default mongoose.model('User', userSchema);

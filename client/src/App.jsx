@@ -3,15 +3,14 @@ import Dashboard from './pages/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
 import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
-import DashboardHome from './pages/DashboardHome'; // Make sure this file exists
-import NewBooking from './pages/NewBooking';       // Make sure this file exists
+import DashboardHome from './pages/DashboardHome'; 
+import NewBooking from './pages/NewBooking';       
 import AuthPage from './pages/AuthPage';
-import EditBooking from './pages/EditBooking'; // Make sure this file exists
+import EditBooking from './pages/EditBooking'; 
 import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
-import AdminPanelPage from './pages/AdminPanelPage'; // Make sure this file exists
-
-
+import AdminPanelPage from './pages/AdminPanelPage'; 
+import DriverDashboard from './pages/DriverDashboard';
 function App() {
   return (
     <Routes>
@@ -30,7 +29,7 @@ function App() {
         <Route path="bookings/new" element={<NewBooking />} />
         <Route path="/dashboard/bookings/edit/:id" element={<EditBooking />} />
         <Route path="admin/users" element={<AdminPanelPage />} />
-
+        <Route path="driver" element={<DriverDashboard />} />
 
       </Route>
       <Route path="/" element={<AuthPage />} />

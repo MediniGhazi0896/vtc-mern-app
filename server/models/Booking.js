@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const bookingSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // assuming you have a User model
+    ref: 'User', 
     required: true
   },
   pickupLocation: {
@@ -22,7 +22,17 @@ const bookingSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  assignedDriver: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+  default: null
+},
+status: {
+  type: String,
+  enum: ['Pending', 'Confirmed', 'Cancelled'],
+  default: 'Pending'
+}
   
 });
 

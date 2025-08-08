@@ -40,7 +40,7 @@ const NewBooking = () => {
           slotProps={{ inputLabel: { shrink: true } }}
           onChange={handleChange}
           required
-        />
+        />    
         <Button type="submit" variant="contained">Submit</Button>
       </Box>
     </Paper>

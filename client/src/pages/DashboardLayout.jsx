@@ -41,10 +41,11 @@ const DashboardLayout = ({ children }) => {
 
   const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard', roles: ['user', 'admin', 'driver'] },
-  { text: 'My Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings', roles: ['user', 'admin'] },
-  { text: 'New Booking', icon: <LocalTaxi />, route: '/dashboard/bookings/new', roles: ['user'] },
+  { text: 'My Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings', roles: ['user'] },
+  { text: 'Manage Bookings', icon: <LocalTaxi />, route: '/dashboard/bookings', roles: ['admin'] },
   { text: 'Profile', icon: <Person />, route: '/dashboard/profile', roles: ['user', 'admin', 'driver'] },
-  { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users', roles: ['admin'] }
+  { text: 'Admin Panel', icon: <Person />, route: '/dashboard/admin/users', roles: ['admin'] },
+  { text: 'Driver Panel', icon: <LocalTaxi />, route: '/dashboard/driver', roles: ['driver'] },
 ];
 
 
