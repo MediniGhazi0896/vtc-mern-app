@@ -8,39 +8,54 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { useAuth } from '../context/AuthContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const DashboardHome = () => {
-  const [stats, setStats] = useState({ total: 0, completed: 0, cancelled: 0 , pending: 0 });
+  const { user } = useAuth();
+  const [stats, setStats] = useState({ total: 0, completed: 0, cancelled: 0, pending: 0 });
 
   useEffect(() => {
-    API.get('/bookings/stats')
-      .then(res => setStats(res.data))
-      .catch(() => alert('Failed to load stats'));
-  }, []);
+    const fetchStats = async () => {
+      try {
+        const endpoint =
+          user?.role === 'driver'
+            ? '/bookings/driver/stats'
+            : '/bookings/stats';
+
+        const res = await API.get(endpoint);
+        setStats(res.data);
+      } catch (err) {
+        console.error('❌ Failed to load stats:', err);
+        alert('Failed to load stats');
+      }
+    };
+
+    fetchStats();
+  }, [user]);
 
   const chartData = {
     labels: ['Completed', 'Cancelled', 'Pending'],
-    datasets: [{
-      data: [
-        stats.completed,
-        stats.cancelled,
-        stats.total - stats.completed - stats.cancelled
-      ],
-      backgroundColor: ['#4caf50', '#f44336', '#ff9800'],
-    }]
+    datasets: [
+      {
+        data: [stats.completed, stats.cancelled, stats.pending],
+        backgroundColor: ['#4caf50', '#f44336', '#ff9800'],
+      },
+    ],
   };
 
   return (
     <>
-      <Typography variant="h5" gutterBottom>📊 Dashboard</Typography>
+      <Typography variant="h5" gutterBottom>
+        📊 Dashboard
+      </Typography>
       <Grid container spacing={3}>
         {[
           { title: 'Total Bookings', value: stats.total },
           { title: 'Completed Rides', value: stats.completed },
           { title: 'Cancelled Rides', value: stats.cancelled },
-          { title: 'Pending Rides', value: stats.pending }
+          { title: 'Pending Rides', value: stats.pending },
         ].map((item, idx) => (
           <Grid item xs={12} sm={4} key={idx}>
             <Paper elevation={3} sx={{ padding: 3 }}>
@@ -49,6 +64,7 @@ const DashboardHome = () => {
             </Paper>
           </Grid>
         ))}
+
         <Grid item xs={12}>
           <Paper sx={{ padding: 2 }}>
             <Typography variant="h6">Ride Status</Typography>
