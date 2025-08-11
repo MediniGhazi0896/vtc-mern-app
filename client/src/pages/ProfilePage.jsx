@@ -14,23 +14,26 @@ const ProfilePage = () => {
   const { user, setUser } = useAuth();
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+const handleUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    const formData = new FormData();
-    formData.append('image', file);
+  const formData = new FormData();
+  formData.append('avatar', file); // ⬅️ match backend field name
 
-    setUploading(true);
-    try {
-      const res = await API.put('/users/profile-picture', formData);
-      setUser({ ...user, profileImage: res.data.imagePath });
-    } catch {
-      alert('❌ Failed to upload');
-    } finally {
-      setUploading(false);
-    }
-  };
+  setUploading(true);
+  try {
+    const res = await API.put('/users/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    setUser({ ...user, profileImage: res.data.profileImage });
+  } catch {
+    alert('❌ Failed to upload');
+  } finally {
+    setUploading(false);
+  }
+};
+
 console.log('🔍 profileImage:', user?.profileImage);
   return (
     <Paper sx={{ p: 3 }}>
