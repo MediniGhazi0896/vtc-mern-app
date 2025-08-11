@@ -11,6 +11,10 @@ import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import AdminPanelPage from './pages/AdminPanelPage'; 
 import DriverDashboard from './pages/DriverDashboard';
+import ChatPage from './pages/ChatPage';
+import NotificationsPage from './pages/NotificationsPage';
+import SettingsPage from './pages/SettingsPage';
+import HelpPage from './pages/HelpPage';
 function App() {
   return (
     <Routes>
@@ -30,9 +34,12 @@ function App() {
         <Route path="/dashboard/bookings/edit/:id" element={<EditBooking />} />
         <Route path="admin/users" element={<AdminPanelPage />} />
         <Route path="driver" element={<DriverDashboard />} />
-
+        <Route path="chat/:bookingId" element={<ChatPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
       </Route>
       <Route path="/" element={<AuthPage />} />
+        <Route path="/dashboard/settings" element={<SettingsPage />} />
+<Route path="/dashboard/help" element={<HelpPage />} />
 
     </Routes>
   );

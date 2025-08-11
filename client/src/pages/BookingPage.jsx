@@ -7,6 +7,8 @@ import {
 import API from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import Badge from '@mui/material/Badge';
 
 const BookingPage = () => {
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ const BookingPage = () => {
   useEffect(() => {
     fetchBookings();
     fetchDrivers();
-    
+
   }, []);
 
   const fetchBookings = () => {
@@ -32,17 +34,17 @@ const BookingPage = () => {
       .catch(() => alert('Failed to load bookings'));
   };
 
- const fetchDrivers = () => {
-  API.get('/admin/users')
-    .then((res) => {
-      const onlyDrivers = res.data.users.filter((u) => u.role === 'driver');
-      console.log("🚗 Filtered drivers:", onlyDrivers);
-      setDrivers(onlyDrivers);
-    })
-    .catch((err) => {
-      console.error('❌ Failed to load drivers:', err.response?.data || err.message);
-    });
-};
+  const fetchDrivers = () => {
+    API.get('/admin/users')
+      .then((res) => {
+        const onlyDrivers = res.data.users.filter((u) => u.role === 'driver');
+        console.log("🚗 Filtered drivers:", onlyDrivers);
+        setDrivers(onlyDrivers);
+      })
+      .catch((err) => {
+        console.error('❌ Failed to load drivers:', err.response?.data || err.message);
+      });
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this booking?')) return;
@@ -145,7 +147,7 @@ const BookingPage = () => {
               <TableCell>{b.pickupLocation}</TableCell>
               <TableCell>{b.destination}</TableCell>
               <TableCell>{getStatusChip(b.status)}</TableCell>
-              {user?.role === 'admin' && ( <TableCell>
+              {user?.role === 'admin' && (<TableCell>
                 <FormControl fullWidth size="small">
                   <Select
                     value={b.assignedDriver?._id || ''}
@@ -158,12 +160,30 @@ const BookingPage = () => {
                         {d.name}
                       </MenuItem>
                     ))}
-                  </Select> 
+                  </Select>
                 </FormControl>
               </TableCell>)}
               <TableCell>
                 <Button size="small" color="primary" onClick={() => navigate(`/dashboard/bookings/edit/${b._id}`)}>Edit</Button>
                 <Button size="small" color="error" onClick={() => handleDelete(b._id)}>Delete</Button>
+                {b.assignedDriver && (<Button
+                  size="small"
+                  variant="outlined"
+                  sx={{ ml: 1 }}
+                  onClick={() => navigate(`/dashboard/chat/${b._id}`)}
+                  startIcon={
+                    <Badge
+                      badgeContent={0} // ← Replace 0 with real unread count logic later
+                      color="error"
+                      overlap="circular"
+                    >
+                      <ChatBubbleOutlineIcon />
+                    </Badge>
+                  }
+                >
+                  Chat
+                </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}

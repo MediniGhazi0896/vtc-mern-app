@@ -5,7 +5,7 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import bookingsRoutes from './routes/bookingsRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import userRoutes from './routes/userRoutes.js';  // Import userRoutes
+import userRoutes from './routes/userRoutes.js'; 
 
 dotenv.config();
 

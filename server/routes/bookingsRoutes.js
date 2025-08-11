@@ -212,5 +212,30 @@ router.patch('/:id/status', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/bookings/analytics/daily
+router.get('/analytics/daily', authenticate, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admins only' });
+  }
+
+  try {
+    const dailyStats = await Booking.aggregate([
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.json(dailyStats);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load analytics', error: err.message });
+  }
+});
+
 export default router;
 // This code defines the booking routes for a VTC application, allowing users to create, read, update, and delete bookings.
