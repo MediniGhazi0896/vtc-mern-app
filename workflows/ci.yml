@@ -1,0 +1,52 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main, develop, "feature/**" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      # Checkout repo
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # Install dependencies (server + client)
+      - name: 📦 Install root dependencies
+        run: npm install
+
+      - name: 📦 Install server dependencies
+        working-directory: server
+        run: npm install
+
+      - name: 📦 Install client dependencies
+        working-directory: client
+        run: npm install
+
+      # Lint
+      - name: 🧹 Run ESLint
+        run: npx eslint . --ext .js,.jsx --max-warnings=0 || true
+
+      # Build client
+      - name: 🏗️ Build client
+        working-directory: client
+        run: npm run build
+
+      # Run tests (if you add them later)
+      - name: ✅ Run tests
+        run: npm test --if-present
