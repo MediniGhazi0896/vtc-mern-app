@@ -1,40 +1,18 @@
-// models/Booking.js
 import mongoose from 'mongoose';
 
-const bookingSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', 
-    required: true
+const bookingSchema = new mongoose.Schema(
+  {
+    pickupLocation: { type: String, required: true },
+    destination: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'confirmed', 'cancelled', 'completed'], // 🔑 added completed
+      default: 'pending',
+    },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    assignedDriver: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
-  pickupLocation: {
-    type: String,
-    required: true
-  },
-  destination: {
-    type: String,
-    required: true
-  },
-  status: {
-    type: String,
-    default: 'pending'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  assignedDriver: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'User',
-  default: null
-},
-status: {
-  type: String,
-  enum: ['Pending', 'Confirmed', 'Cancelled'],
-  default: 'Pending'
-}
-  
-});
+  { timestamps: true }
+);
 
-const Booking = mongoose.model('Booking', bookingSchema);
-export default Booking;
+export default mongoose.model('Booking', bookingSchema);

@@ -1,5 +1,5 @@
 import express from 'express';
-import Message from '../models/Message.js';
+import Message from '../models/ChatMessage.js';
 import Booking from '../models/Booking.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 

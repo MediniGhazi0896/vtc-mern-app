@@ -4,6 +4,8 @@ import { authenticate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
+const VALID_STATUSES = ['pending', 'confirmed', 'cancelled'];
+
 // GET /api/bookings — Get all bookings
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -23,15 +25,16 @@ router.get('/stats', authenticate, async (req, res) => {
     const bookings = await Booking.find(userFilter);
 
     const total = bookings.length;
-    const completed = bookings.filter(b => b.status === 'Confirmed').length;
-    const cancelled = bookings.filter(b => b.status === 'Cancelled').length;
-    const pending = bookings.filter(b => !b.status || b.status === 'Pending').length;
+    const completed = bookings.filter(b => b.status === 'confirmed').length;
+    const cancelled = bookings.filter(b => b.status === 'cancelled').length;
+    const pending = bookings.filter(b => !b.status || b.status === 'pending').length;
 
     res.json({ total, completed, cancelled, pending });
   } catch (err) {
     res.status(500).json({ message: 'Failed to load stats' });
   }
 });
+
 // GET /api/bookings/driver — Get bookings assigned to the driver
 router.get('/driver', authenticate, async (req, res) => {
   if (req.user.role !== 'driver') {
@@ -45,9 +48,11 @@ router.get('/driver', authenticate, async (req, res) => {
 
     res.json(bookings);
   } catch (err) {
+    console.error('❌ Driver bookings error:', err);
     res.status(500).json({ message: 'Failed to load bookings' });
   }
-});  
+});
+
 
 // GET /api/bookings/:id — Get one booking
 router.get('/:id', authenticate, async (req, res) => {
@@ -65,6 +70,7 @@ router.get('/:id', authenticate, async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch booking' });
   }
 });
+
 // GET /api/bookings/driver/stats — stats for assigned bookings
 router.get('/driver/stats', authenticate, async (req, res) => {
   if (req.user.role !== 'driver') {
@@ -75,17 +81,18 @@ router.get('/driver/stats', authenticate, async (req, res) => {
     const bookings = await Booking.find({ assignedDriver: req.user.id });
 
     const total = bookings.length;
-    const completed = bookings.filter(b => b.status === 'Confirmed').length;
-    const cancelled = bookings.filter(b => b.status === 'Cancelled').length;
-    const pending = bookings.filter(b => b.status === 'Pending').length;
+    const completed = bookings.filter(b => b.status === 'completed').length; // ✅ use completed
+    const confirmed = bookings.filter(b => b.status === 'confirmed').length;
+    const cancelled = bookings.filter(b => b.status === 'cancelled').length;
+    const pending = bookings.filter(b => b.status === 'pending').length;
 
-    res.json({ total, completed, cancelled, pending });
+    res.json({ total, completed, confirmed, cancelled, pending });
   } catch (err) {
-    console.error('Driver stats error:', err);
+    console.error('❌ Driver stats error:', err);
     res.status(500).json({ message: 'Failed to load driver stats' });
   }
 });
- 
+
 
 // PUT /api/bookings/:id/assign-driver
 router.put('/:id/assign-driver', authenticate, async (req, res) => {
@@ -94,10 +101,6 @@ router.put('/:id/assign-driver', authenticate, async (req, res) => {
   }
 
   const { driverId } = req.body;
-
-/*   if (!driverId ) {
-    return res.status(400).json({ message: 'Missing driverId in request body' });
-  } */
 
   try {
     const booking = await Booking.findById(req.params.id);
@@ -130,7 +133,7 @@ router.post('/', authenticate, async (req, res) => {
       userId: req.user.id,
       pickupLocation,
       destination,
-      status: status || 'Pending',
+      status: status ? status.toLowerCase() : 'pending', // 🔑 force lowercase
     });
 
     const saved = await booking.save();
@@ -154,7 +157,7 @@ router.put('/:id', authenticate, async (req, res) => {
     const { pickupLocation, destination, status } = req.body;
     if (pickupLocation) booking.pickupLocation = pickupLocation;
     if (destination) booking.destination = destination;
-    if (status) booking.status = status;
+    if (status) booking.status = status.toLowerCase(); // 🔑 always lowercase
 
     const updated = await booking.save();
     res.status(200).json(updated);
@@ -182,35 +185,45 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-
-
 // PATCH /api/bookings/:id/status
 router.patch('/:id/status', authenticate, async (req, res) => {
-  const { status } = req.body;
-
-  if (req.user.role !== 'driver') {
-    return res.status(403).json({ message: 'Only drivers can update status' });
-  }
-
-  if (!['Confirmed', 'Cancelled'].includes(status)) {
-    return res.status(400).json({ message: 'Invalid status' });
-  }
-
   try {
-    const booking = await Booking.findById(req.params.id);
+    const { status } = req.body;
+    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed']; // ✅ added completed
 
-    if (!booking) return res.status(404).json({ message: 'Booking not found' });
-    if (!booking.assignedDriver || booking.assignedDriver.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Unauthorized' });
+    if (!validStatuses.includes(status.toLowerCase())) {
+      return res.status(400).json({ message: 'Invalid status value' });
     }
 
-    booking.status = status;
+    const booking = await Booking.findById(req.params.id).populate(
+      'userId assignedDriver',
+      'name email role'
+    );
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+   /*  // 🔐 Only admin or assigned driver can update
+    if (
+      req.user.role !== 'admin' &&
+      (!booking.assignedDriver || booking.assignedDriver.toString() !== req.user.id)
+    ) {
+      return res
+        .status(403)
+        .json({ message: 'Not authorized to update this booking' });
+    } */
+
+    booking.status = status.toLowerCase(); // normalize
     await booking.save();
-    res.json({ message: 'Status updated', booking });
+
+    res.json(booking);
   } catch (err) {
-    res.status(500).json({ message: 'Update failed', error: err.message });
+    console.error('❌ Failed to update booking status:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
+
+
 
 // GET /api/bookings/analytics/daily
 router.get('/analytics/daily', authenticate, async (req, res) => {
@@ -223,12 +236,12 @@ router.get('/analytics/daily', authenticate, async (req, res) => {
       {
         $group: {
           _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
-          count: { $sum: 1 }
-        }
+          count: { $sum: 1 },
+        },
       },
-      { $sort: { _id: 1 } }
+      { $sort: { _id: 1 } },
     ]);
 
     res.json(dailyStats);
@@ -238,4 +251,3 @@ router.get('/analytics/daily', authenticate, async (req, res) => {
 });
 
 export default router;
-// This code defines the booking routes for a VTC application, allowing users to create, read, update, and delete bookings.
