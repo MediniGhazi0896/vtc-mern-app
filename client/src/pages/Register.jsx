@@ -1,59 +1,113 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import User from '../models/User.js';
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
+import API from "../services/api";
+import {
+  Container,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Paper,
+  Link,
+} from "@mui/material";
+import LogoNavbar from "../components/LogoNavbar";
 
-const isValidEmail = (email) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const Register = () => {
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-const isStrongPassword = (password) =>
-  password.length >= 8 &&
-  /[A-Z]/.test(password) &&
-  /[a-z]/.test(password) &&
-  /[0-9]/.test(password) &&
-  /[!@#$%^&*]/.test(password);
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
-router.post('/register', async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.post("/public/register", form); // ✅ call backend
+      login(res.data.user);
+      localStorage.setItem("token", res.data.token);
+      navigate("/dashboard");
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Registration failed");
+    }
+  };
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: 'Name, email, and password are required' });
-  }
+  return (
+    <>
+      <LogoNavbar />
+      <Container maxWidth="sm">
+        <Paper
+          elevation={6}
+          sx={{
+            mt: 12,
+            p: 4,
+            borderRadius: 3,
+            textAlign: "center",
+          }}
+        >
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            Create Your DriveLink Account
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            Sign up to start booking safe and reliable rides
+          </Typography>
 
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ message: 'Invalid email format' });
-  }
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <TextField
+              label="Full Name"
+              name="name"
+              fullWidth
+              margin="normal"
+              value={form.name}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              label="Email"
+              name="email"
+              type="email"
+              fullWidth
+              margin="normal"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              label="Password"
+              name="password"
+              type="password"
+              fullWidth
+              margin="normal"
+              value={form.password}
+              onChange={handleChange}
+              required
+              helperText="At least 8 characters, incl. uppercase, number & special character"
+            />
 
-  if (!isStrongPassword(password)) {
-    return res.status(400).json({
-      message:
-        'Password must be at least 8 characters long, include upper/lowercase letters, a number, and a special character (!@#$%^&*)',
-    });
-  }
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              size="large"
+              fullWidth
+              sx={{ mt: 3, borderRadius: 2 }}
+            >
+              Register
+            </Button>
+          </Box>
 
-  try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ message: 'User already exists' });
+          {/* ✅ Link to login page */}
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Already have an account?{" "}
+            <Link component={RouterLink} to="/login">
+              Login
+            </Link>
+          </Typography>
+        </Paper>
+      </Container>
+    </>
+  );
+};
 
-    const hashed = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, email, password: hashed, role });
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
-    res.status(201).json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      token,
-    });
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+export default Register;

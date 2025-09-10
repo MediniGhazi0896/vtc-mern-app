@@ -5,6 +5,18 @@ import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 
 const router = express.Router();
+// GET /api/notifications/unread-count
+router.get('/unread-count', authenticate, async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      user: req.user.id,
+      isRead: false
+    });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch unread count' });
+  }
+});
 
 // GET notifications for current user
 router.get('/', authenticate, async (req, res) => {
@@ -48,6 +60,19 @@ router.patch('/:id/read', authenticate, async (req, res) => {
   notification.isRead = true;
   await notification.save();
   res.json(notification);
+});
+
+// PATCH /api/notifications/mark-all-read
+router.patch('/mark-all-read', authenticate, async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { user: req.user.id, isRead: false },
+      { $set: { isRead: true } }
+    );
+    res.json({ message: 'All notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to mark notifications' });
+  }
 });
 
 export default router;
