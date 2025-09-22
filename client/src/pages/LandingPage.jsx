@@ -3,69 +3,124 @@ import { Link as RouterLink } from "react-router-dom";
 import {
   Container,
   Grid,
-  Paper,
   Typography,
   Box,
   Button,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import MainNavbar from "../components/MainNavbar"; // ✅ use the new Uber-style navbar
-import Footer from "../components/Footer"; // ✅ your new footer
+import MainNavbar from "../components/MainNavbar";
+import Footer from "../components/Footer";
+import { useAuth } from "../context/AuthContext";
 
 const LandingPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { user } = useAuth();
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {/* ✅ Uber-style navbar */}
       <MainNavbar />
 
-      {/* ✅ Hero Section */}
-      <Box
-        sx={{
-          backgroundColor: "primary.main",
-          color: "white",
-          textAlign: "center",
-          py: 12,
-          px: 2,
-          mt: 8, // offset for fixed navbar
-        }}
+{/* ✅ Hero Section */}
+{!user ? (
+  <Box
+    sx={{
+      backgroundColor: theme.palette.primary.main, // ✅ same as navbar
+      color: theme.palette.primary.contrastText,
+      textAlign: "center",
+      py: 12,
+      px: 2,
+      mt: 8,
+    }}
+  >
+    <Container maxWidth="md">
+      <Typography
+        variant={isMobile ? "h4" : "h2"}
+        fontWeight="bold"
+        gutterBottom
       >
-        <Container maxWidth="md">
-          <Typography
-            variant={isMobile ? "h4" : "h2"}
-            fontWeight="bold"
-            gutterBottom
-          >
-            Welcome to DriveLink
-          </Typography>
-          <Typography variant="h6" sx={{ mb: 4 }}>
-            Your trusted ride-hailing partner — quick, safe, and reliable.
-          </Typography>
-          <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
-            <Button
-              variant="contained"
-              color="secondary"
-              size="large"
-              component={RouterLink}
-              to="/dashboard/bookings"
-            >
-              Book a Ride
-            </Button>
-            <Button
-              variant="outlined"
-              sx={{ color: "white", borderColor: "white" }}
-              size="large"
-              component={RouterLink}
-              to="/login"
-            >
-              Sign In
-            </Button>
-          </Box>
-        </Container>
+        Welcome to DriveLink
+      </Typography>
+      <Typography variant="h6" sx={{ mb: 4 }}>
+        Your trusted ride-hailing partner — quick, safe, and reliable.
+      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          size="large"
+          component={RouterLink}
+          to="/dashboard/bookings"
+        >
+          Book a Ride
+        </Button>
+        <Button
+          variant="outlined"
+          sx={{
+            color: theme.palette.primary.contrastText,
+            borderColor: theme.palette.primary.contrastText,
+          }}
+          size="large"
+          component={RouterLink}
+          to="/login"
+        >
+          Sign In
+        </Button>
       </Box>
+    </Container>
+  </Box>
+) : (
+  <Box
+    sx={{
+      backgroundColor: theme.palette.primary.main, // ✅ same as navbar
+      color: theme.palette.primary.contrastText,
+      textAlign: "center",
+      py: 10,
+      px: 2,
+      mt: 8,
+    }}
+  >
+    <Container maxWidth="md">
+      <Typography
+        variant={isMobile ? "h5" : "h3"}
+        fontWeight="bold"
+        gutterBottom
+      >
+        Welcome back, {user.name?.split(" ")[0]} 👋
+      </Typography>
+      <Typography variant="h6" sx={{ mb: 4 }}>
+        {user.role === "driver"
+          ? "Ready to start driving today?"
+          : "Ready to book your next ride?"}
+      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
+        {user.role === "driver" ? (
+          <Button
+            variant="contained"
+            color="secondary"
+            size="large"
+            component={RouterLink}
+            to="/dashboard"
+          >
+            Go Online
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            color="secondary"
+            size="large"
+            component={RouterLink}
+            to="/dashboard/bookings/new"
+          >
+            Book a Ride
+          </Button>
+        )}
+      </Box>
+    </Container>
+  </Box>
+)}
+
 
       {/* ✅ Features Section */}
       <Container maxWidth="lg" sx={{ py: 10 }}>
@@ -85,6 +140,11 @@ const LandingPage = () => {
               title: "24/7 Support",
               desc: "DriveLink is always here to assist you.",
               icon: "📞",
+            },
+            {
+              title: "Affordable",
+              desc: "Competitive pricing with transparent fares.",
+              icon: "💶",
             },
           ].map((f, i) => (
             <Grid
@@ -106,55 +166,6 @@ const LandingPage = () => {
         </Grid>
       </Container>
 
-      {/* ✅ How It Works Section */}
-      <Box sx={{ backgroundColor: "#f5f5f5", py: 10 }}>
-        <Container maxWidth="lg" textAlign="center">
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            How DriveLink Works
-          </Typography>
-          <Grid container spacing={6} justifyContent="center">
-            {[
-              { step: "Request your ride", icon: "📱" },
-              { step: "Get matched instantly", icon: "🤝" },
-              { step: "Enjoy the journey", icon: "🚗" },
-              { step: "Pay with ease", icon: "💳" },
-            ].map((s, i) => (
-              <Grid
-                item
-                xs={6}
-                md={3}
-                key={i}
-                sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
-              >
-                <Box sx={{ fontSize: "3rem", lineHeight: 1, mb: 1 }}>{s.icon}</Box>
-                <Typography variant="subtitle1">{s.step}</Typography>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* ✅ Contact Section */}
-      <Box id="contact" sx={{ py: 10, textAlign: "center" }}>
-        <Container maxWidth="sm">
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Contact DriveLink
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            Have questions? Reach out to our support team anytime.
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            href="mailto:support@drivelink.com"
-          >
-            Email Support
-          </Button>
-        </Container>
-      </Box>
-
-      {/* ✅ Footer */}
       <Footer />
     </Box>
   );

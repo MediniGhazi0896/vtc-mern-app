@@ -153,6 +153,66 @@ router.get('/audit/logs', authenticate, authorize(['admin']), async (req, res) =
     res.status(500).json({ message: 'Failed to load audit logs', error: err.message });
   }
 });
+// ✅ Get drivers with stats
+router.get("/drivers/stats", authenticate, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
 
+    // Fetch all drivers
+    const drivers = await User.find({ role: "driver" })
+      .limit(limit)
+      .select("name email isAvailable profileImage createdAt updatedAt");
+
+    // Format response for frontend
+    const driverStats = drivers.map((d) => ({
+      id: d._id,
+      name: d.name,
+      avatar: d.profileImage,
+      active: d.isAvailable,
+      rides: Math.floor(Math.random() * 200), // TODO: replace with real ride count
+      earnings: Math.floor(Math.random() * 5000), // TODO: replace with aggregation
+      rating: (Math.random() * 2 + 3).toFixed(1), // TODO: replace with avg review score
+      lastOnline: d.updatedAt, // or add a dedicated lastSeen field
+    }));
+
+    res.json({ drivers: driverStats });
+  } catch (err) {
+    console.error("Error fetching drivers:", err);
+    res.status(500).json({ message: "Failed to fetch drivers", error: err.message });
+  }
+});
+
+// ✅ Monthly revenue stats
+router.get("/analytics/revenue-monthly", authenticate, async (req, res) => {
+  try {
+    // Group completed bookings by month, sum their earnings
+    const result = await Booking.aggregate([
+      { $match: { status: "completed" } },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          revenue: { $sum: "$price" }, // assumes you have a price field
+        },
+      },
+      { $sort: { "_id": 1 } },
+    ]);
+
+    // Format response like: [{ label: 'Jan', revenue: 1200 }]
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+
+    const series = months.map((m, i) => {
+      const monthData = result.find((r) => r._id === i + 1);
+      return { label: m, revenue: monthData ? monthData.revenue : 0 };
+    });
+
+    res.json({ series });
+  } catch (err) {
+    console.error("Error fetching revenue monthly:", err);
+    res.status(500).json({ message: "Failed to fetch revenue stats", error: err.message });
+  }
+});
 
 export default router;

@@ -90,7 +90,7 @@ const BookingPage = () => {
 
   const getStatusChip = (status) => {
     const colorMap = {
-      confirmed: "success",
+      completed: "success",
       cancelled: "error",
       pending: "warning",
     };
@@ -124,7 +124,7 @@ const BookingPage = () => {
           <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="confirmed">Confirmed</MenuItem>
+            <MenuItem value="completed">Completed</MenuItem>
             <MenuItem value="cancelled">Cancelled</MenuItem>
           </Select>
         </FormControl>

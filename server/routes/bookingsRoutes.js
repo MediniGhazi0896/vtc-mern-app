@@ -4,7 +4,7 @@ import { authenticate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-const VALID_STATUSES = ['pending', 'confirmed', 'cancelled'];
+const VALID_STATUSES = ['pending', 'completed', 'cancelled'];
 
 // GET /api/bookings — Get all bookings
 router.get('/', authenticate, async (req, res) => {
@@ -25,7 +25,7 @@ router.get('/stats', authenticate, async (req, res) => {
     const bookings = await Booking.find(userFilter);
 
     const total = bookings.length;
-    const completed = bookings.filter(b => b.status === 'confirmed').length;
+    const completed = bookings.filter(b => b.status === 'completed').length;
     const cancelled = bookings.filter(b => b.status === 'cancelled').length;
     const pending = bookings.filter(b => !b.status || b.status === 'pending').length;
 
@@ -82,11 +82,10 @@ router.get('/driver/stats', authenticate, async (req, res) => {
 
     const total = bookings.length;
     const completed = bookings.filter(b => b.status === 'completed').length; // ✅ use completed
-    const confirmed = bookings.filter(b => b.status === 'confirmed').length;
     const cancelled = bookings.filter(b => b.status === 'cancelled').length;
     const pending = bookings.filter(b => b.status === 'pending').length;
 
-    res.json({ total, completed, confirmed, cancelled, pending });
+    res.json({ total, completed, cancelled, pending });
   } catch (err) {
     console.error('❌ Driver stats error:', err);
     res.status(500).json({ message: 'Failed to load driver stats' });
@@ -189,7 +188,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 router.patch('/:id/status', authenticate, async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed']; // ✅ added completed
+    const validStatuses = ['pending', 'cancelled', 'completed']; // ✅ added completed
 
     if (!validStatuses.includes(status.toLowerCase())) {
       return res.status(400).json({ message: 'Invalid status value' });
@@ -203,15 +202,6 @@ router.patch('/:id/status', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-   /*  // 🔐 Only admin or assigned driver can update
-    if (
-      req.user.role !== 'admin' &&
-      (!booking.assignedDriver || booking.assignedDriver.toString() !== req.user.id)
-    ) {
-      return res
-        .status(403)
-        .json({ message: 'Not authorized to update this booking' });
-    } */
 
     booking.status = status.toLowerCase(); // normalize
     await booking.save();
