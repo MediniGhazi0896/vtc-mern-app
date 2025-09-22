@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
 import Review from "./models/Review.js";
 import Service from "./models/Service.js";
 import Booking from "./models/Booking.js";
@@ -23,17 +24,19 @@ const seed = async () => {
     await Service.deleteMany({});
     await Booking.deleteMany({});
     await User.deleteMany({ email: /driver_demo/i });
+    await User.deleteMany({ email: "rider@example.com" });
 
     // Ensure demo rider exists
-    let demoUser = await User.findOne({ email: "rider@example.com" });
-    if (!demoUser) {
-      demoUser = await User.create({
-        name: "Demo Rider",
-        email: "rider@example.com",
-        password: "password123",
-        role: "user",
-      });
-    }
+    const hashedPassword = await bcrypt.hash("password123", 12);
+    const demoUser = await User.create({
+      name: "Demo Rider",
+      email: "rider@example.com",
+      phone: "+491234567890", // ✅ added
+      password: hashedPassword,
+      role: "traveller",
+      isAvailable: true,
+      profileImage: "",
+    });
 
     // 🚗 Demo drivers with avatars
     const driverNames = [
@@ -53,11 +56,14 @@ const seed = async () => {
       (_, i) => `/uploads/profile/demo_driver_${i + 1}.png`
     );
 
+    const hashedDriverPass = await bcrypt.hash("driverpass123", 12);
+
     const drivers = await User.insertMany(
       driverNames.map((name, i) => ({
         name,
         email: `driver_demo_${i + 1}@example.com`,
-        password: "driverpass123",
+        phone: `+49123456789${i}`, // ✅ unique phone per driver
+        password: hashedDriverPass,
         role: "driver",
         isAvailable: Math.random() > 0.5,
         profileImage: avatarUrls[i],
@@ -102,20 +108,29 @@ const seed = async () => {
       ["Berlin", "Frankfurt"],
     ];
 
+    const bookingStatuses = [
+      "pending",
+      "completed",
+      "cancelled",
+    ];
+
     const demoBookings = germanRoutes.flatMap(([from, to]) =>
-      Array.from({ length: Math.floor(Math.random() * 15) + 5 }, () => ({
-        userId: demoUser._id,
-        pickupLocation: from,
-        destination: to,
-        status: "completed",
-        assignedDriver:
-          drivers[Math.floor(Math.random() * drivers.length)]._id,
-      }))
-    );
+  Array.from({ length: Math.floor(Math.random() * 15) + 5 }, () => ({
+    userId: demoUser._id,
+    pickupLocation: from,
+    destination: to,
+    status:
+      bookingStatuses[Math.floor(Math.random() * bookingStatuses.length)],
+    assignedDriver:
+      drivers[Math.floor(Math.random() * drivers.length)]._id,
+    price: Math.floor(Math.random() * 90) + 10, // ✅ random €10–100
+  }))
+);
+
 
     const bookings = await Booking.insertMany(demoBookings);
 
-    // Reviews linked to bookings
+    // Reviews linked only to completed bookings
     const sampleReviews = [
       "Amazing service! The driver was very professional and friendly.",
       "Smooth ride, arrived on time, will definitely use again!",
@@ -124,16 +139,20 @@ const seed = async () => {
       "Very reliable, especially for airport transfers.",
     ];
 
-    const reviewsToInsert = bookings.slice(0, 5).map((b, i) => ({
+    const completedBookings = bookings.filter((b) => b.status === "completed");
+
+    const reviewsToInsert = completedBookings.slice(0, 5).map((b, i) => ({
       user: b.userId,
       rating: Math.floor(Math.random() * 2) + 4,
       comment: sampleReviews[i],
     }));
 
-    await Review.insertMany(reviewsToInsert);
+    if (reviewsToInsert.length > 0) {
+      await Review.insertMany(reviewsToInsert);
+    }
 
     console.log(
-      "✅ Demo data (drivers w/ avatars, services, bookings, reviews) seeded successfully!"
+      "✅ Demo data (drivers w/ avatars, services, bookings w/ random status, reviews, phones) seeded successfully!"
     );
     process.exit(0);
   } catch (err) {

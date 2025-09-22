@@ -16,6 +16,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import HelpPage from "./pages/HelpPage";
 import LandingPage from "./pages/LandingPage"; // ✅ new import
+import 'leaflet/dist/leaflet.css';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
       {/* Public routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AuthPage />} />
+      <Route path="/register" element={<AuthPage />} />
 
       {/* Dashboard (protected) */}
       <Route
