@@ -24,6 +24,7 @@ const AuthPage = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -33,6 +34,10 @@ const AuthPage = () => {
     role: "traveller",
   });
   const [isLogin, setIsLogin] = useState(true);
+
+  // ✅ Get redirect param (default: "/" : Landing Page)
+  const params = new URLSearchParams(location.search);
+  const redirectPath = params.get("redirect") || "/";
 
   // ✅ Auto-set login/register mode based on path
   useEffect(() => {
@@ -48,41 +53,60 @@ const AuthPage = () => {
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
     if (token && storedUser && !user) {
-      login(JSON.parse(storedUser));
-      navigate("/dashboard");
+      const parsedUser = JSON.parse(storedUser);
+      login(parsedUser);
+
+      if (parsedUser.role === "driver") {
+        navigate("/dashboard");
+      } else if (parsedUser.role === "traveller") {
+        navigate(redirectPath !== "/" ? redirectPath : "/dashboard/bookings/new");
+      } else {
+        navigate("/"); // fallback
+      }
     }
-  }, [user, login, navigate]);
+  }, [user, login, navigate, redirectPath]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-// ✅ Only validate phone if registering
-  if (!isLogin) {
-    const phoneRegex = /^[0-9]{6,15}$/;
-    if (!phoneRegex.test(form.phone)) {
-      alert("Please enter a valid phone number (6–15 digits, numbers only).");
-      return;
+    // ✅ Only validate phone if registering
+    if (!isLogin) {
+      const phoneRegex = /^[0-9]{6,15}$/;
+      if (!phoneRegex.test(form.phone)) {
+        alert("Please enter a valid phone number (6–15 digits, numbers only).");
+        return;
+      }
     }
-  }
 
-  const endpoint = isLogin ? "/auth/login" : "/auth/register";
-  const payload = isLogin
-    ? { email: form.email, password: form.password }
-    : {
-        ...form,
-        phone: `${form.countryCode}${form.phone}`, // combine code + number
-      };
+    const endpoint = isLogin ? "/auth/login" : "/auth/register";
+    const payload = isLogin
+      ? { email: form.email, password: form.password }
+      : {
+          ...form,
+          phone: `${form.countryCode}${form.phone}`, // combine code + number
+        };
 
-  try {
-    const res = await API.post(endpoint, payload);
-    login(res.data.user);
-    localStorage.setItem("user", JSON.stringify(res.data.user));
-    localStorage.setItem("token", res.data.token);
-    navigate("/"); // ✅ back to landing after login/register
-  } catch (err) {
-    alert(err?.response?.data?.message || err.message || "Auth failed");
-  }
-};
+    try {
+      const res = await API.post(endpoint, payload);
+      login(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("token", res.data.token);
+
+      // ✅ Role-based redirect after login/register
+      if (res.data.user.role === "driver") {
+        navigate("/dashboard", { replace: true });
+      } else if (res.data.user.role === "traveller") {
+        navigate(
+          redirectPath !== "/" ? redirectPath : "/dashboard/bookings/new",
+          { replace: true }
+        );
+      } else {
+        navigate("/", { replace: true }); // fallback
+      }
+    } catch (err) {
+      alert(err?.response?.data?.message || err.message || "Auth failed");
+    }
+  };
 
   const handleToggle = () => {
     setIsLogin(!isLogin);
@@ -111,6 +135,7 @@ const AuthPage = () => {
             <Typography variant="h5" align="center" gutterBottom>
               {isLogin ? "Login" : "Sign Up"}
             </Typography>
+
             {/* Always show */}
             <TextField
               label="Email"
@@ -119,17 +144,14 @@ const AuthPage = () => {
               fullWidth
               margin="normal"
               value={form.email}
-              onChange={(e) =>
-                setForm({ ...form, email: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
             />
             <PasswordField
               value={form.password}
-              onChange={(e) =>
-                setForm({ ...form, password: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
+
             <form onSubmit={handleSubmit}>
               {/* Only show on Register */}
               {!isLogin && (
@@ -140,18 +162,14 @@ const AuthPage = () => {
                     fullWidth
                     margin="normal"
                     value={form.name}
-                    onChange={(e) =>
-                      setForm({ ...form, name: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                   />
 
                   {/* ✅ Phone field with country code */}
                   <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
                     <FormControl sx={{ minWidth: 100 }}>
-                      <InputLabel id="country-code-label">
-                        Code
-                      </InputLabel>
+                      <InputLabel id="country-code-label">Code</InputLabel>
                       <Select
                         labelId="country-code-label"
                         value={form.countryCode}
@@ -200,8 +218,6 @@ const AuthPage = () => {
                   </ToggleButtonGroup>
                 </>
               )}
-
-
 
               <Button
                 type="submit"

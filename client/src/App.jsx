@@ -15,8 +15,9 @@ import ChatPage from "./pages/ChatPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import HelpPage from "./pages/HelpPage";
-import LandingPage from "./pages/LandingPage"; // ✅ new import
-import 'leaflet/dist/leaflet.css';
+import LandingPage from "./pages/LandingPage";
+import BookingStatus from "./pages/BookingStatus"; // ✅ added
+import "leaflet/dist/leaflet.css";
 
 function App() {
   return (
@@ -25,6 +26,16 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
+
+      {/* Booking status is private */}
+      <Route
+        path="/booking/status/:bookingId"
+        element={
+          <PrivateRoute>
+            <BookingStatus />
+          </PrivateRoute>
+        }
+      />
 
       {/* Dashboard (protected) */}
       <Route
@@ -41,7 +52,7 @@ function App() {
         <Route path="bookings/edit/:id" element={<EditBooking />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="admin/users" element={<AdminPanelPage />} />
-        <Route path="admin/audit-logs" element={<AuditLogsPage />} /> {/* ✅ added */}
+        <Route path="admin/audit-logs" element={<AuditLogsPage />} />
         <Route path="driver" element={<DriverDashboard />} />
         <Route path="chat/:bookingId" element={<ChatPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

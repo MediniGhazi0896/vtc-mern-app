@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+// server/models/Booking.js
+import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -6,13 +7,20 @@ const bookingSchema = new mongoose.Schema(
     destination: { type: String, required: true },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'cancelled', 'completed'], // 🔑 added completed
-      default: 'pending',
+      enum: ["pending", "confirmed", "cancelled", "completed"],
+      default: "pending",
     },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    assignedDriver: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    assignedDriver: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    // ✅ New fields
+    service: { type: String }, // e.g. drivelink, bolt, etc.
+    price: { type: Number },
+    eta: { type: Number }, // minutes
+
+    rejectedDrivers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // ✅ drivers who rejected
   },
   { timestamps: true }
 );
 
-export default mongoose.model('Booking', bookingSchema);
+export default mongoose.model("Booking", bookingSchema);
