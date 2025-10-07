@@ -1,3 +1,4 @@
+// NewBooking.jsx
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   TextField,
@@ -15,6 +16,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import API from "../services/api";
 
 // ✅ Leaflet marker assets fix (Vite)
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -27,19 +29,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// ✅ Pins (same style, different colors)
+// ✅ Pins
 const pickupIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/149/149060.png", // green pin
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/149/149060.png",
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 });
 const destinationIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/149/149059.png", // red pin
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/149/149059.png",
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 });
 
-// ✅ Car icons (normal vs selected)
+// ✅ Car icons
 const CAR_URL = "https://cdn-icons-png.flaticon.com/512/61/61168.png";
 const makeCarIcon = (size = 30) =>
   new L.Icon({
@@ -50,7 +52,7 @@ const makeCarIcon = (size = 30) =>
 const carIcon = makeCarIcon(30);
 const carIconSelected = makeCarIcon(42);
 
-// ✅ Services (synced with cars)
+// ✅ Services
 const companyGroups = [
   {
     category: "Economy",
@@ -86,42 +88,57 @@ const NewBooking = () => {
     date: "",
   });
 
-  const [routeInfo, setRouteInfo] = useState(null); // { distanceKm, durationMin }
+  const [routeInfo, setRouteInfo] = useState(null);
   const [showOffers, setShowOffers] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
+  const [surgeFactor, setSurgeFactor] = useState(1);
 
-  // Map & layers
   const mapRef = useRef(null);
   const pickupMarkerRef = useRef(null);
   const destinationMarkerRef = useRef(null);
   const routeLayerRef = useRef(null);
 
-  // Cars & animation
-  const carMarkersRef = useRef(new Map()); // key -> marker
-  const carOffsetsRef = useRef(new Map()); // key -> start offset index
+  const carMarkersRef = useRef(new Map());
+  const carOffsetsRef = useRef(new Map());
   const animTimerRef = useRef(null);
-  const routeCoordsRef = useRef([]); // [ [lat, lng], ... ]
+  const routeCoordsRef = useRef([]);
 
   const navigate = useNavigate();
 
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleChange = (e) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
+  // ✅ Submit booking
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedKey) {
-      alert("Please select a ride option first.");
-      return;
-    }
-    alert(`Booking created! Service: ${selectedKey}`);
-    navigate("/dashboard/bookings");
-  };
+  e.preventDefault();
+  if (!selectedKey) {
+    alert("Please select a ride option first.");
+    return;
+  }
 
-  // -------- Helpers for pricing/ETA (simple model) --------
+  try {
+    const chosen = priceAndEta.get(selectedKey);
+    const res = await API.post("/bookings", {
+      pickupLocation: form.pickupLocation,
+      destination: form.destination,
+      service: selectedKey,
+      price: parseFloat(chosen.price),
+      eta: chosen.eta,
+    });
+
+    // ✅ booking ID is inside res.data.booking
+    navigate(`/booking/status/${res.data.booking._id}`);
+  } catch (err) {
+    console.error(err);
+    alert("❌ Failed to create booking");
+  }
+};
+
+  // -------- Pricing Engine --------
   const priceAndEta = useMemo(() => {
     const distanceKm = routeInfo?.distanceKm ?? 0;
     const durationMin = routeInfo?.durationMin ?? 0;
 
-    // very simple model per category
     const model = {
       Economy: { base: 3, perKm: 1.1, perMin: 0.2 },
       Comfort: { base: 5, perKm: 1.6, perMin: 0.3 },
@@ -131,13 +148,13 @@ const NewBooking = () => {
     const result = new Map();
     flatServices.forEach((s) => {
       const m = model[s.category] ?? model.Economy;
-      const price = Math.max(5, m.base + m.perKm * distanceKm + m.perMin * durationMin);
-      // Fake ETA: between 3–10 min tweaked per service
+      let price = m.base + m.perKm * distanceKm + m.perMin * durationMin;
+      price = price * surgeFactor;
       const eta = Math.max(3, Math.round(durationMin * 0.15) + (s.key.length % 5));
       result.set(s.key, { price: price.toFixed(2), eta });
     });
     return result;
-  }, [routeInfo]);
+  }, [routeInfo, surgeFactor]);
 
   // -------- Geocoding & Route --------
   const geocodeAddress = async (address, type) => {
@@ -160,13 +177,10 @@ const NewBooking = () => {
         mapRef.current.setView([lat, lng], 13);
       } else {
         if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
-        destinationMarkerRef.current = L.marker([lat, lng], { icon: destinationIcon }).addTo(
-          mapRef.current
-        );
+        destinationMarkerRef.current = L.marker([lat, lng], { icon: destinationIcon }).addTo(mapRef.current);
         mapRef.current.setView([lat, lng], 13);
       }
 
-      // If we have both pins, fit + route
       if (pickupMarkerRef.current && destinationMarkerRef.current) {
         const group = L.featureGroup([pickupMarkerRef.current, destinationMarkerRef.current]);
         mapRef.current.fitBounds(group.getBounds(), { padding: [50, 50] });
@@ -174,8 +188,7 @@ const NewBooking = () => {
         const start = pickupMarkerRef.current.getLatLng();
         const end = destinationMarkerRef.current.getLatLng();
         await drawRoute(start, end);
-        spawnCars(); // cars appear only after route exists
-        setShowOffers(true);
+        spawnCars();
       }
     } catch (err) {
       console.error("Geocoding error:", err);
@@ -194,12 +207,9 @@ const NewBooking = () => {
       const coords = route.geometry.coordinates.map((c) => [c[1], c[0]]);
       routeCoordsRef.current = coords;
 
-      // Clear old route
       if (routeLayerRef.current) routeLayerRef.current.remove();
 
-      routeLayerRef.current = L.polyline(coords, { color: "#1976d2", weight: 4 }).addTo(
-        mapRef.current
-      );
+      routeLayerRef.current = L.polyline(coords, { color: "#1976d2", weight: 4 }).addTo(mapRef.current);
       mapRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50] });
 
       setRouteInfo({
@@ -211,7 +221,7 @@ const NewBooking = () => {
     }
   };
 
-  // -------- Cars (synced with services) --------
+  // -------- Cars --------
   const clearCars = () => {
     if (animTimerRef.current) {
       clearInterval(animTimerRef.current);
@@ -227,7 +237,6 @@ const NewBooking = () => {
     const coords = routeCoordsRef.current;
     if (!coords.length || !mapRef.current) return;
 
-    // Evenly space start offsets along the route
     const step = Math.max(1, Math.floor(coords.length / (flatServices.length + 1)));
 
     flatServices.forEach((service, i) => {
@@ -243,7 +252,6 @@ const NewBooking = () => {
       carOffsetsRef.current.set(service.key, offset);
     });
 
-    // Animate cars along the route
     let t = 0;
     animTimerRef.current = setInterval(() => {
       t += 1;
@@ -253,13 +261,11 @@ const NewBooking = () => {
         const marker = carMarkersRef.current.get(service.key);
         if (marker) marker.setLatLng(coords[idx]);
       });
-    }, 800); // ~1 step per 0.8s
+    }, 800);
   };
 
-  // When selecting an offer, highlight the matching car
   const selectOffer = (key) => {
     setSelectedKey(key);
-    // Update car markers (icon + zIndex)
     carMarkersRef.current.forEach((marker, k) => {
       marker.setIcon(k === key ? carIconSelected : carIcon);
       marker.setZIndexOffset(k === key ? 1000 : 0);
@@ -269,7 +275,7 @@ const NewBooking = () => {
   // -------- Init map once --------
   useEffect(() => {
     if (!mapRef.current && document.getElementById("map")) {
-      const map = L.map("map").setView([51.1657, 10.4515], 6); // Germany center
+      const map = L.map("map").setView([51.1657, 10.4515], 6);
       mapRef.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
@@ -277,7 +283,6 @@ const NewBooking = () => {
     }
 
     return () => {
-      // cleanup
       clearCars();
       if (mapRef.current) {
         mapRef.current.remove();
@@ -333,9 +338,27 @@ const NewBooking = () => {
               required
             />
 
-            <Button type="submit" variant="contained">
-              Submit
-            </Button>
+            {/* ✅ Dynamic button behavior */}
+            {!routeInfo ? (
+              <Button disabled variant="contained">
+                Select Route
+              </Button>
+            ) : !showOffers ? (
+              <Button
+                onClick={() => {
+                  setSurgeFactor(1 + Math.random() * 0.5); // 1.0–1.5 surge
+                  setShowOffers(true);
+                }}
+                variant="contained"
+                color="secondary"
+              >
+                See Prices
+              </Button>
+            ) : (
+              <Button type="submit" variant="contained" color="primary">
+                Confirm Booking
+              </Button>
+            )}
 
             {routeInfo && (
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -346,20 +369,18 @@ const NewBooking = () => {
           </Box>
         </Grid>
 
-        {/* MIDDLE: Offers (appear after route ready) */}
+        {/* MIDDLE: Offers */}
         <Grid item xs={12} md={4}>
           {showOffers ? (
             <Box>
               <Typography variant="h6" sx={{ mb: 1 }}>
-                Choose a Ride
+                Choose a Ride (Surge x{surgeFactor.toFixed(2)})
               </Typography>
-
               {companyGroups.map((group) => (
                 <Box key={group.category} sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
                     {group.category}
                   </Typography>
-
                   <Stack spacing={1.25}>
                     {group.options.map((opt) => {
                       const sel = selectedKey === opt.key;
@@ -399,7 +420,7 @@ const NewBooking = () => {
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              Select pickup and destination to see available rides.
+              Select pickup and destination, then click <b>See Prices</b>.
             </Typography>
           )}
         </Grid>

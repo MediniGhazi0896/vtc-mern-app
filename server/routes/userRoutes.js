@@ -32,19 +32,27 @@ router.put('/users/profile-picture', authenticate, upload.single('image'), async
   }
 });
 
-router.patch('/driver/availability', authenticate, async (req, res) => {
+router.patch("/driver/availability", authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'driver') {
-      return res.status(403).json({ message: 'Only drivers can update availability' });
+    if (req.user.role !== "driver") {
+      return res.status(403).json({ message: "Only drivers can toggle availability" });
     }
 
-    const user = await User.findById(req.user.id);
-    user.isAvailable = !user.isAvailable;
-    await user.save();
+    // Flip availability directly
+    const driver = await User.findById(req.user.id);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
 
-    res.json({ isAvailable: user.isAvailable });
+    const newAvailability = !driver.isAvailable;
+
+    await User.updateOne(
+      { _id: req.user.id },
+      { $set: { isAvailable: newAvailability } }
+    );
+
+    res.json({ isAvailable: newAvailability });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to update availability' });
+    console.error("❌ Driver availability error:", err);
+    res.status(500).json({ message: "Failed to update driver availability" });
   }
 });
 
