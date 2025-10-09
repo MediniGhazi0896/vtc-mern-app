@@ -20,7 +20,11 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 
-dotenv.config();
+// ✅ Payments & Invoices (new)
+import paymentsRoutes, { paymentsWebhookRoute } from "./routes/paymentsRoutes.js";
+import invoicesRoutes from "./routes/invoicesRoutes.js";
+
+dotenv.config({path: "./server/.env"});
 
 // --------------------------------------------------------------------------
 // EXPRESS + HTTP SERVER
@@ -28,15 +32,24 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Important: Initialize socket.io once
+// ✅ Initialize socket.io once
 initSocket(server);
 
 // --------------------------------------------------------------------------
-// MIDDLEWARE
+// PATH SETUP
 // --------------------------------------------------------------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --------------------------------------------------------------------------
+// STRIPE WEBHOOK ROUTE (must come BEFORE express.json())
+// --------------------------------------------------------------------------
+// ⚠️ Stripe needs raw body parsing to verify signature
+app.use("/api/payments/webhook", paymentsWebhookRoute);
+
+// --------------------------------------------------------------------------
+// STANDARD MIDDLEWARE
+// --------------------------------------------------------------------------
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -53,8 +66,15 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/public", publicRoutes);
 
+// ✅ New Payment & Invoice routes
+app.use("/api/payments", paymentsRoutes);
+app.use("/api/invoices", invoicesRoutes);
+
+// --------------------------------------------------------------------------
+// ROOT TEST ROUTE
+// --------------------------------------------------------------------------
 app.get("/", (_, res) =>
-  res.send("✅ VTC-MERN API running with single Socket.io instance")
+  res.send("✅ VTC-MERN API running with Socket.io, Payments & Invoices enabled")
 );
 
 // --------------------------------------------------------------------------

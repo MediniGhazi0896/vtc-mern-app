@@ -72,3 +72,13 @@ button:focus-visible {
 }
 
 }
+.car-economy img {
+  filter: hue-rotate(210deg) saturate(1.2); /* blue tint */
+}
+.car-comfort img {
+  filter: hue-rotate(30deg) saturate(1.2); /* orange tint */
+}
+.car-business img {
+  filter: brightness(0.6) contrast(1.2); /* black look */
+}
+

@@ -11,20 +11,34 @@ const router = express.Router();
 /* 🟢 GET: DRIVER BOOKINGS — must come BEFORE /:id to avoid CastError         */
 /* -------------------------------------------------------------------------- */
 router.get("/driver", authenticate, async (req, res) => {
-  if (req.user.role !== "driver") {
+  if (req.user.role !== "driver")
     return res.status(403).json({ message: "Access denied" });
-  }
 
   try {
     const bookings = await Booking.find({ assignedDriver: req.user.id })
-      .populate("userId", "name email")
-      .populate("assignedDriver", "name email vehicle")
-      .sort({ createdAt: -1 });
-
+      .populate("userId", "name email phone")
+      .populate("assignedDriver", "name email vehicle driverLicense");
     res.json(bookings);
   } catch (err) {
     console.error("❌ Driver bookings fetch error:", err);
     res.status(500).json({ message: "Failed to load driver bookings" });
+  }
+});
+
+router.get("/driver/stats", authenticate, async (req, res) => {
+  if (req.user.role !== "driver")
+    return res.status(403).json({ message: "Access denied" });
+
+  try {
+    const bookings = await Booking.find({ assignedDriver: req.user.id });
+    const total = bookings.length;
+    const completed = bookings.filter((b) => b.status === "completed").length;
+    const pending = bookings.filter((b) => b.status === "pending").length;
+    const cancelled = bookings.filter((b) => b.status === "cancelled").length;
+    res.json({ total, completed, pending, cancelled });
+  } catch (err) {
+    console.error("❌ Driver stats error:", err);
+    res.status(500).json({ message: "Failed to load driver stats" });
   }
 });
 
@@ -35,13 +49,42 @@ router.get("/", authenticate, async (req, res) => {
   try {
     const filter = req.user.role === "admin" ? {} : { userId: req.user.id };
     const bookings = await Booking.find(filter)
-      .populate("userId", "name email")
-      .populate("assignedDriver", "name email vehicle");
-
+      .populate("userId", "name email phone")
+      .populate("assignedDriver", "name email vehicle driverLicense");
     res.status(200).json(bookings);
   } catch (err) {
     console.error("❌ Booking fetch error:", err);
     res.status(500).json({ message: "Failed to fetch bookings" });
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/* 🟢 GET SINGLE BOOKING                                                      */
+/* -------------------------------------------------------------------------- */
+router.get("/:id", authenticate, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate("userId", "name email phone")
+      .populate("assignedDriver", "name email vehicle driverLicense");
+
+    if (!booking)
+      return res.status(404).json({ message: "Booking not found" });
+
+    // ✅ Allow admin or the traveller who made the booking
+    if (
+      req.user.role !== "admin" &&
+      booking.userId._id.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    res.status(200).json({
+      booking,
+      driver: booking.assignedDriver || null,
+    });
+  } catch (err) {
+    console.error("❌ Fetch single booking error:", err);
+    res.status(500).json({ message: "Failed to fetch booking" });
   }
 });
 
@@ -121,7 +164,9 @@ router.post("/:id/accept", authenticate, async (req, res) => {
       .populate("assignedDriver", "name email vehicle");
 
     const io = getIO();
-    io.emit("ride:update", updated);
+io.emit("ride:update", { booking: updated, driver: updated.assignedDriver });
+console.log(`📢 Emitted ride:update for booking ${updated._id} to all clients`);
+
 
     res.json({ booking: updated, driver: updated.assignedDriver });
   } catch (err) {
@@ -182,7 +227,9 @@ router.patch("/:id/status", authenticate, async (req, res) => {
       .populate("assignedDriver", "name email vehicle");
 
     const io = getIO();
-    io.emit("ride:update", updated);
+    io.emit("ride:update", { booking: updated, driver: updated.assignedDriver });
+console.log(`📢 Emitted ride:update for booking ${updated._id} to all clients`);
+
 
     res.json({ booking: updated, driver: updated.assignedDriver });
   } catch (err) {
