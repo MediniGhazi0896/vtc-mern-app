@@ -1,4 +1,3 @@
-// NewBooking.jsx
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   TextField,
@@ -18,7 +17,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import API from "../services/api";
 
-// ✅ Leaflet marker assets fix (Vite)
+// ✅ Fix Leaflet icons for Vite
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -29,7 +28,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// ✅ Pins
+// ✅ Custom marker icons
 const pickupIcon = new L.Icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/149/149060.png",
   iconSize: [32, 32],
@@ -41,18 +40,32 @@ const destinationIcon = new L.Icon({
   iconAnchor: [16, 32],
 });
 
-// ✅ Car icons
-const CAR_URL = "https://cdn-icons-png.flaticon.com/512/61/61168.png";
-const makeCarIcon = (size = 30) =>
-  new L.Icon({
-    iconUrl: CAR_URL,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
-const carIcon = makeCarIcon(30);
-const carIconSelected = makeCarIcon(42);
+// ✅ Import your car image (rename uploaded one to car-icon.png)
+import carBaseIcon from "../assets/car-icon.png";
 
-// ✅ Services
+// ✅ Define car icons by category
+const carIcons = {
+  Economy: new L.Icon({
+    iconUrl: carBaseIcon,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    className: "car-economy",
+  }),
+  Comfort: new L.Icon({
+    iconUrl: carBaseIcon,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    className: "car-comfort",
+  }),
+  Business: new L.Icon({
+    iconUrl: carBaseIcon,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    className: "car-business",
+  }),
+};
+
+// ✅ Service Groups
 const companyGroups = [
   {
     category: "Economy",
@@ -82,12 +95,7 @@ const flatServices = companyGroups.flatMap((g) =>
 );
 
 const NewBooking = () => {
-  const [form, setForm] = useState({
-    pickupLocation: "",
-    destination: "",
-    date: "",
-  });
-
+  const [form, setForm] = useState({ pickupLocation: "", destination: "", date: "" });
   const [routeInfo, setRouteInfo] = useState(null);
   const [showOffers, setShowOffers] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
@@ -97,66 +105,62 @@ const NewBooking = () => {
   const pickupMarkerRef = useRef(null);
   const destinationMarkerRef = useRef(null);
   const routeLayerRef = useRef(null);
-
-  const carMarkersRef = useRef(new Map());
-  const carOffsetsRef = useRef(new Map());
+  const carDataRef = useRef([]);
   const animTimerRef = useRef(null);
-  const routeCoordsRef = useRef([]);
 
   const navigate = useNavigate();
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  // ✅ Submit booking
+  /* -------------------------------------------------------------------------- */
+  /* SUBMIT BOOKING */
+  /* -------------------------------------------------------------------------- */
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!selectedKey) {
-    alert("Please select a ride option first.");
-    return;
-  }
+    e.preventDefault();
+    if (!selectedKey) return alert("Please select a ride option first.");
 
-  try {
-    const chosen = priceAndEta.get(selectedKey);
-    const res = await API.post("/bookings", {
-      pickupLocation: form.pickupLocation,
-      destination: form.destination,
-      service: selectedKey,
-      price: parseFloat(chosen.price),
-      eta: chosen.eta,
-    });
+    try {
+      const chosen = priceAndEta.get(selectedKey);
+      const res = await API.post("/bookings", {
+        pickupLocation: form.pickupLocation,
+        destination: form.destination,
+        service: selectedKey,
+        price: parseFloat(chosen.price),
+        eta: chosen.eta,
+      });
+      const bookingId = res.data.booking?._id || res.data._id;
+      navigate(`/booking/status/${bookingId}`);
+    } catch (err) {
+      console.error(err);
+      alert("❌ Failed to create booking");
+    }
+  };
 
-    // ✅ booking ID is inside res.data.booking
-    navigate(`/booking/status/${res.data.booking._id}`);
-  } catch (err) {
-    console.error(err);
-    alert("❌ Failed to create booking");
-  }
-};
-
-  // -------- Pricing Engine --------
+  /* -------------------------------------------------------------------------- */
+  /* PRICE ENGINE */
+  /* -------------------------------------------------------------------------- */
   const priceAndEta = useMemo(() => {
-    const distanceKm = routeInfo?.distanceKm ?? 0;
-    const durationMin = routeInfo?.durationMin ?? 0;
-
+    const d = routeInfo?.distanceKm ?? 0;
+    const t = routeInfo?.durationMin ?? 0;
     const model = {
       Economy: { base: 3, perKm: 1.1, perMin: 0.2 },
       Comfort: { base: 5, perKm: 1.6, perMin: 0.3 },
       Business: { base: 8, perKm: 2.2, perMin: 0.4 },
     };
-
     const result = new Map();
     flatServices.forEach((s) => {
-      const m = model[s.category] ?? model.Economy;
-      let price = m.base + m.perKm * distanceKm + m.perMin * durationMin;
-      price = price * surgeFactor;
-      const eta = Math.max(3, Math.round(durationMin * 0.15) + (s.key.length % 5));
+      const m = model[s.category];
+      let price = (m.base + m.perKm * d + m.perMin * t) * surgeFactor;
+      const eta = Math.max(3, Math.round(t * 0.15) + (s.key.length % 5));
       result.set(s.key, { price: price.toFixed(2), eta });
     });
     return result;
   }, [routeInfo, surgeFactor]);
 
-  // -------- Geocoding & Route --------
+  /* -------------------------------------------------------------------------- */
+  /* MAP + GEOCODING */
+  /* -------------------------------------------------------------------------- */
   const geocodeAddress = async (address, type) => {
     if (!address) return;
     try {
@@ -174,21 +178,19 @@ const NewBooking = () => {
       if (type === "pickup") {
         if (pickupMarkerRef.current) pickupMarkerRef.current.remove();
         pickupMarkerRef.current = L.marker([lat, lng], { icon: pickupIcon }).addTo(mapRef.current);
-        mapRef.current.setView([lat, lng], 13);
+        mapRef.current.setView([lat, lng], 15);
+        spawnCarsOnNearbyRoads(lat, lng);
       } else {
         if (destinationMarkerRef.current) destinationMarkerRef.current.remove();
         destinationMarkerRef.current = L.marker([lat, lng], { icon: destinationIcon }).addTo(mapRef.current);
-        mapRef.current.setView([lat, lng], 13);
       }
 
       if (pickupMarkerRef.current && destinationMarkerRef.current) {
         const group = L.featureGroup([pickupMarkerRef.current, destinationMarkerRef.current]);
         mapRef.current.fitBounds(group.getBounds(), { padding: [50, 50] });
-
         const start = pickupMarkerRef.current.getLatLng();
         const end = destinationMarkerRef.current.getLatLng();
         await drawRoute(start, end);
-        spawnCars();
       }
     } catch (err) {
       console.error("Geocoding error:", err);
@@ -205,74 +207,142 @@ const NewBooking = () => {
 
       const route = data.routes[0];
       const coords = route.geometry.coordinates.map((c) => [c[1], c[0]]);
-      routeCoordsRef.current = coords;
-
       if (routeLayerRef.current) routeLayerRef.current.remove();
 
       routeLayerRef.current = L.polyline(coords, { color: "#1976d2", weight: 4 }).addTo(mapRef.current);
-      mapRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50] });
-
-      setRouteInfo({
-        distanceKm: route.distance / 1000,
-        durationMin: Math.round(route.duration / 60),
-      });
+      setRouteInfo({ distanceKm: route.distance / 1000, durationMin: Math.round(route.duration / 60) });
     } catch (err) {
       console.error("Route error:", err);
     }
   };
 
-  // -------- Cars --------
+  /* -------------------------------------------------------------------------- */
+  /* 🚕 CITY DRIVE AI v3 - realistic roaming cars + direction alignment */
+  /* -------------------------------------------------------------------------- */
   const clearCars = () => {
-    if (animTimerRef.current) {
-      clearInterval(animTimerRef.current);
-      animTimerRef.current = null;
-    }
-    carMarkersRef.current.forEach((m) => m.remove());
-    carMarkersRef.current.clear();
-    carOffsetsRef.current.clear();
+    if (animTimerRef.current) clearInterval(animTimerRef.current);
+    carDataRef.current.forEach((c) => c.marker.remove());
+    carDataRef.current = [];
   };
 
-  const spawnCars = () => {
+  const spawnCarsOnNearbyRoads = async (lat, lng) => {
     clearCars();
-    const coords = routeCoordsRef.current;
-    if (!coords.length || !mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
-    const step = Math.max(1, Math.floor(coords.length / (flatServices.length + 1)));
+    try {
+      const overpassURL = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:15];
+        way["highway"](around:600,${lat},${lng});
+        out geom;`;
+      const res = await fetch(overpassURL);
+      const data = await res.json();
+      const roads = data?.elements?.filter((el) => el.type === "way" && el.geometry?.length > 3);
+      if (!roads?.length) return spawnFallbackCars(lat, lng);
 
-    flatServices.forEach((service, i) => {
-      const offset = step * (i + 1);
-      const pos = coords[offset % coords.length];
-      const marker = L.marker(pos, {
-        icon: service.key === selectedKey ? carIconSelected : carIcon,
-        title: service.name,
-        zIndexOffset: service.key === selectedKey ? 1000 : 0,
-      }).addTo(mapRef.current);
+      const numCars = flatServices.length;
+      for (let i = 0; i < numCars; i++) {
+        const road = roads[Math.floor(Math.random() * roads.length)];
+        const coords = road.geometry.map((g) => [g.lat, g.lon]);
+        const start = coords[Math.floor(Math.random() * coords.length)];
+        const service = flatServices[i % flatServices.length];
+        const icon = carIcons[service.category];
+        const marker = L.marker(start, { icon }).addTo(map);
 
-      carMarkersRef.current.set(service.key, marker);
-      carOffsetsRef.current.set(service.key, offset);
+        carDataRef.current.push({
+          marker,
+          coords,
+          index: 0,
+          speed: 0.00003 + Math.random() * 0.00002,
+          idle: false,
+        });
+      }
+
+      // 🕹️ Animate cars with proper direction + smooth turns
+      animTimerRef.current = setInterval(() => {
+        carDataRef.current.forEach((car) => {
+          if (!car.coords?.length || car.idle) return;
+
+          const curr = car.coords[car.index];
+          const next = car.coords[car.index + 1];
+          if (!next) {
+            const nextRoad = roads[Math.floor(Math.random() * roads.length)];
+            car.coords = nextRoad.geometry.map((g) => [g.lat, g.lon]);
+            car.index = 0;
+            if (Math.random() < 0.3) {
+              car.idle = true;
+              setTimeout(() => (car.idle = false), 1200 + Math.random() * 2000);
+            }
+            return;
+          }
+
+          // Smooth movement
+          const stepSize = car.speed;
+          const latDiff = next[0] - curr[0];
+          const lngDiff = next[1] - curr[1];
+          const newLat = curr[0] + latDiff * stepSize;
+          const newLng = curr[1] + lngDiff * stepSize;
+
+          // Compute geographic bearing for direction
+          const toRad = (deg) => (deg * Math.PI) / 180;
+          const toDeg = (rad) => (rad * 180) / Math.PI;
+          const lat1 = toRad(curr[0]);
+          const lon1 = toRad(curr[1]);
+          const lat2 = toRad(next[0]);
+          const lon2 = toRad(next[1]);
+          const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+          const x =
+            Math.cos(lat1) * Math.sin(lat2) -
+            Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+          let bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+
+          // Rotate car smoothly toward direction
+          const iconEl = car.marker._icon;
+          if (iconEl) {
+            const currentRotation = parseFloat(iconEl.dataset.rotation || 0);
+            const diff = ((bearing - currentRotation + 540) % 360) - 180;
+            const smoothed = currentRotation + diff * 0.15;
+            iconEl.style.transform = `rotate(${smoothed - 90}deg)`;
+            iconEl.dataset.rotation = smoothed;
+          }
+
+          car.marker.setLatLng([newLat, newLng]);
+          car.index += 1;
+        });
+      }, 400);
+    } catch (err) {
+      console.error("City drive AI error:", err);
+      spawnFallbackCars(lat, lng);
+    }
+  };
+
+  const spawnFallbackCars = (lat, lng) => {
+    const radius = 0.008;
+    const map = mapRef.current;
+    flatServices.forEach((s, i) => {
+      const angle = (i / flatServices.length) * 2 * Math.PI;
+      const carLat = lat + radius * Math.cos(angle);
+      const carLng = lng + radius * Math.sin(angle);
+      const marker = L.marker([carLat, carLng], { icon: carIcons[s.category] }).addTo(map);
+      carDataRef.current.push({ marker, angle, speed: 0.02 });
     });
-
-    let t = 0;
     animTimerRef.current = setInterval(() => {
-      t += 1;
-      flatServices.forEach((service) => {
-        const base = carOffsetsRef.current.get(service.key) ?? 0;
-        const idx = (base + t) % coords.length;
-        const marker = carMarkersRef.current.get(service.key);
-        if (marker) marker.setLatLng(coords[idx]);
+      carDataRef.current.forEach((c) => {
+        c.angle += c.speed;
+        const newLat = lat + radius * Math.cos(c.angle);
+        const newLng = lng + radius * Math.sin(c.angle);
+        c.marker.setLatLng([newLat, newLng]);
       });
-    }, 800);
+    }, 700);
   };
 
   const selectOffer = (key) => {
     setSelectedKey(key);
-    carMarkersRef.current.forEach((marker, k) => {
-      marker.setIcon(k === key ? carIconSelected : carIcon);
-      marker.setZIndexOffset(k === key ? 1000 : 0);
-    });
+    carDataRef.current.forEach((c) => c.marker.setIcon(carIcons[c.category]));
   };
 
-  // -------- Init map once --------
+  /* -------------------------------------------------------------------------- */
+  /* INIT MAP */
+  /* -------------------------------------------------------------------------- */
   useEffect(() => {
     if (!mapRef.current && document.getElementById("map")) {
       const map = L.map("map").setView([51.1657, 10.4515], 6);
@@ -281,7 +351,6 @@ const NewBooking = () => {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
     }
-
     return () => {
       clearCars();
       if (mapRef.current) {
@@ -291,6 +360,9 @@ const NewBooking = () => {
     };
   }, []);
 
+  /* -------------------------------------------------------------------------- */
+  /* UI */
+  /* -------------------------------------------------------------------------- */
   return (
     <Paper sx={{ p: { xs: 2, md: 3 }, minHeight: "100vh" }}>
       <Typography variant="h6" sx={{ mb: 3 }}>
@@ -338,7 +410,6 @@ const NewBooking = () => {
               required
             />
 
-            {/* ✅ Dynamic button behavior */}
             {!routeInfo ? (
               <Button disabled variant="contained">
                 Select Route
@@ -346,7 +417,7 @@ const NewBooking = () => {
             ) : !showOffers ? (
               <Button
                 onClick={() => {
-                  setSurgeFactor(1 + Math.random() * 0.5); // 1.0–1.5 surge
+                  setSurgeFactor(1 + Math.random() * 0.5);
                   setShowOffers(true);
                 }}
                 variant="contained"
@@ -404,7 +475,7 @@ const NewBooking = () => {
                           <Stack direction="row" spacing={1.5} alignItems="center">
                             <DirectionsCarIcon sx={{ color: opt.color }} />
                             <Box>
-                              <Typography sx={{ fontWeight: 700, lineHeight: 1 }}>{opt.name}</Typography>
+                              <Typography sx={{ fontWeight: 700 }}>{opt.name}</Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {opt.seats} seats • ETA {pr?.eta ?? 6} min
                               </Typography>

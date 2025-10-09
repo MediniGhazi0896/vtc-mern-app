@@ -16,7 +16,12 @@ import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import HelpPage from "./pages/HelpPage";
 import LandingPage from "./pages/LandingPage";
-import BookingStatus from "./pages/BookingStatus"; // ✅ added
+import BookingStatus from "./pages/BookingStatus";
+import ProfileInfo from "./pages/ProfileInfo";
+import ProfileSecurity from "./pages/ProfileSecurity";
+import ProfilePrivacy from "./pages/ProfilePrivacy";
+// Leaflet CSS
+// ✅ added
 import "leaflet/dist/leaflet.css";
 
 function App() {
@@ -51,6 +56,9 @@ function App() {
         <Route path="bookings/new" element={<NewBooking />} />
         <Route path="bookings/edit/:id" element={<EditBooking />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile/info" element={<ProfileInfo />} />
+        <Route path="profile/security" element={<ProfileSecurity />} />
+        <Route path="profile/privacy" element={<ProfilePrivacy />} />
         <Route path="admin/users" element={<AdminPanelPage />} />
         <Route path="admin/audit-logs" element={<AuditLogsPage />} />
         <Route path="driver" element={<DriverDashboard />} />
