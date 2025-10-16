@@ -130,12 +130,26 @@ const NewBooking = () => {
         eta: chosen.eta,
       });
       const bookingId = res.data.booking?._id || res.data._id;
-      navigate(`/booking/status/${bookingId}`);
+      await handlePayment(bookingId);
     } catch (err) {
       console.error(err);
       alert("❌ Failed to create booking");
     }
   };
+// 🚀 Pay with Stripe
+const handlePayment = async (bookingId) => {
+  try {
+    const res = await API.post("/payments/create-session", { bookingId });
+    if (res.data.url) {
+      window.location.href = res.data.url; // redirect to Stripe
+    } else {
+      alert("Payment session creation failed");
+    }
+  } catch (err) {
+    console.error("Payment error:", err);
+    alert("Failed to start payment");
+  }
+};
 
   /* -------------------------------------------------------------------------- */
   /* PRICE ENGINE */
